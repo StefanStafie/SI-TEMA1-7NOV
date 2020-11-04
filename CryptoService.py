@@ -85,14 +85,14 @@ def DecryptCBC(message, key, nonce, length, vector):
 
 
 def testingground():
-    text, nonce, length = Encrypt("This need to be a way bigger message", b"Nice password101")
-    print(Decrypt(text, b"Nice password101", nonce, length))
+    text, nonce, length = Encrypt("This need to be a way bigger message", b"MySmallPassword1")
+    print(Decrypt(text, b"MySmallPassword", nonce, length))
 
 
 # testingground()
 
 def testtingground2():
-    text, nonce, length = EncryptCBC('BULLSHIT MEtHOD AND LETS MAKE IT BIGGER', b"Nice password101", vector)
-    print(DecryptCBC(text, b"Nice password101", nonce, length, vector))
+    text, nonce, length = EncryptCBC('BULLSHIT MEtHOD AND LETS MAKE IT BIGGER', b"MySmallPassword1", vector)
+    print(DecryptCBC(text, b"MySmallPassword1", nonce, length, vector))
 
 # testtingground2()

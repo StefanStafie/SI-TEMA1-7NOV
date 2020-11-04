@@ -1,120 +1,62 @@
-import socket
-import time
+import socket as sock
+import time as t
 import CryptoService
 import EncryptedTalk
 
+host_address = "127.0.0.1"
+adress_A = "127.0.0.2"
+adress_B = "127.0.0.3"
+port = 5500
 password3 = b"MySmallPassword3"
 
-def server_program():
-    # get the hostname
-    host = socket.gethostname()
-    port = 5000  # initiate port no above 1024
 
-    server_socket = socket.socket()  # get instance
-    # look closely. The bind() function takes tuple as argument
-    server_socket.bind((host, port))  # bind host address and port together
+def get_key_from_KM(operating_mode):
+    # send to KM
+    socket = sock.socket()
+    socket.bind((adress_A, port))
+    socket.connect((host_address, port))
+    socket.send(operating_mode)
 
-    # configure how many client the server can listen simultaneously
-    server_socket.listen(2)
-    conn, address = server_socket.accept()  # accept new connection
-    print("Connection from: " + str(address))
+    t.sleep(1)  # wait for message to be written to socket
+    response = socket.recv(1024)  # receive key
+    nonce = socket.recv(1024)
+    length = socket.recv(1024)
+    socket.close()
+    return response, nonce, length
+
+
+def run():
+    print("Enter encryption type?")
     while True:
-        # receive data stream. it won't accept data packet greater than 1024 bytes
-        data = conn.recv(1024).decode()
-        print("from connected user: " + str(data))
-
-        if data not in ("ECB", "CBC"):
-            response = "Wrong encryption type"
-            conn.send(response.encode())  # send data to the client
-            response = "1"
-            conn.send(response.encode())  # send data to the client
-            return 0
-        else:
-            response = "The encryption type will be: " + data
-            conn.send(response.encode())  # send data to the client
-            response = "1"
-            conn.send(response.encode())  # send data to the client
-            conn.close()
-            return data
-
-
-def client_program(message, port):
-    host = socket.gethostname()  # as both code is running on same pc
-    working = True
-
-    client_socket = socket.socket()  # instantiate
-    client_socket.connect((host, port))  # connect to the server
-
-    client_socket.send(message.encode())
-    response = []
-    while working:
-        # send message
-
-        data = client_socket.recv(1024)  # receive response
-
-        # print('Received from server: ' + data)  # show in terminal
-        try:
-            data = data.decode()
-
-            data1 = int(data)
-            if data1 == 1:
-                working = False
-                break
-
-        except:
-            pass
-        response.append(data)
-    # client_socket.close()  # close the connection
-
-    return response
-
-
-# client_program()
-
-def Service1():
-    file = open("Message.txt", "r")
-    mess = file.read()
-
-    print("What type of encryption do you want?")
-    try:
         type = int(input("1.ECB\n2.CBC\n"))
-        if type not in (1, 2):
-            print("Wrong input")
-            quit(0)
-    except:
-        print("Wrong input")
-        quit(0)
+        if type in (1, 2):
+            break
+        else:
+            print("press 1 or 2")
+    # connect to client2
+    socket = sock.socket()
+    socket.bind((adress_A, port))
+    socket.connect((adress_B, port))
+
     if type == 1:
-        client_program("ECB", 5000)
-        info = client_program("ECB", 5500)
-        key = CryptoService.Decrypt(info[0], password3, info[1], int(info[2]))
+        response, nonce, length = get_key_from_KM(b"ECB")
+        socket.send("ECB")
     else:
-        client_program('CBC', 5000)
-        info = client_program("CBC", 5500)
-        key = CryptoService.Decrypt(info[0], password3, info[1], int(info[2]))
-    types = server_program()
+        response, nonce, length = get_key_from_KM(b"CBC")
+        socket.send("CBC")
 
-    if types == "ECB":
-        text, nonce, length = CryptoService.Encrypt(mess, key.encode())
-        EncryptedTalk.client_encoded(text, nonce, length, 5000)
-    if types == "CBC":
-        text, nonce, length = CryptoService.EncryptCBC(mess, key.encode(), CryptoService.vector)
+    key = CryptoService.Decrypt(response, password3, nonce, int(length))
 
-        EncryptedTalk.client_encoded(text, nonce, length, 5000)
+    t.sleep(1)
+    if socket.recv(1024) == "Ready to communicate":
+        file = open("Message.txt", "r")  # read the file
+        for message in file.read():
+            if type == 1:
+                text, nonce, length = CryptoService.Encrypt(message, key.encode())
+            else:
+                text, nonce, length = CryptoService.EncryptCBC(message, key.encode(), CryptoService.vector)
+            socket.send(bytes(message))
+        socket.send(b"Transmission ended.")
 
 
-Service1()
-
-
-def Test():
-    message = input('PUT YOUR MEESAGE')
-    encryptType = 'CBC'
-    if encryptType == 'ECB':
-        text, nonce, length = CryptoService.Encrypt(message, b"Nice password101")
-        EncryptedTalk.client_encoded(text, nonce, length, 5000)
-    if encryptType == 'CBC':
-        text, nonce, length = CryptoService.EncryptCBC(message, "Nice password101".encode(), CryptoService.vector)
-        # print(text)
-        EncryptedTalk.client_encoded(text, nonce, length, 5000)
-
-# Test()
+run()

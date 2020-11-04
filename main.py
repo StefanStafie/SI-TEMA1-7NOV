@@ -3,63 +3,53 @@ import time as t
 
 import CryptoService
 
+host_address = "127.0.0.1"
+adress_A = "127.0.0.2"
+adress_B = "127.0.0.3"
+port = 5500
 
-def server(password1="MySmallPassword1", password2="MySmallPassword2", password3=b"MySmallPassword3"):
+
+def KM(password1="MySmallPassword1", password2="MySmallPassword2", password3=b"MySmallPassword3"):
     # initiate socket
     socket = sock.socket()  # get instance
-    hostname = sock.gethostname()
-    port = 5500
-    socket.bind((hostname, port))
+    socket.setsockopt(sock.SOL_SOCKET, sock.SO_REUSEADDR, 1)
+    socket.bind((host_address, port))
 
-    #start listening on socket
-    socket.listen(2)
-    conn, address = socket.accept()  # accept new connection
-    print("Connection from: " + str(address))
-
-    # receive data stream. it won't accept data packet greater than 1024 bytes
-    data = conn.recv(1024).decode()
-    print("from connected user: " + str(data))
-
-    if data not in ("ECB", "CBC"):
-        response = "Wrong encryption type"
-        conn.send(response.encode())  # send data to the client
-        response = "1"
-        conn.send(response.encode())  # send data to the client
-        return 0
-    else:
-        if data == "ECB":
-            response, nonce, length = CryptoService.Encrypt(password1, password3)
-            print(response, nonce, length)
-            conn.send(response)
-            print("send response")  # send data to the client
-            t.sleep(0.5)
-            conn.send(nonce)
-            print("sent nonce")  # send data to the client
-            t.sleep(0.5)
-            conn.send(str(length).encode())
-            t.sleep(0.5)
-            response = "1"
-            conn.send(response.encode())  # send data to the client
-
-        if data == 'CBC':
-            response, nonce, length = CryptoService.Encrypt(password2, password3)
-            print(response, nonce, length)
-            conn.send(response)
-            print("send response")  # send data to the client
-            t.sleep(0.5)
-            conn.send(nonce)
-            print("sent nonce")  # send data to the client
-            t.sleep(0.5)
-            conn.send(str(length).encode())
-            t.sleep(0.5)
-            response = "1"
-            conn.send(response.encode())  # send data to the client
+    # start listening on socket
+    socket.listen(100)
+    print(f"listening on {host_address}:{port}")
+    while True:
+        handle_request(socket, password1, password2, password3)
     # conn.close()
 
 
-def Cryptostart():
-    while True:
-        server()
+def handle_request(socket, password1, password2, password3):
+    conn, address = socket.accept()  # accept new connection
+    print(str(address) + "has just connected")
+
+    # decode data. Maximum 1024 Bytes
+    data = conn.recv(1024).decode()
+    print(f"from connected user: {data}")
+
+    if data not in ("ECB", "CBC"):
+        print("bad request. Closing")
+        response = "Bad request"
+        conn.send(response.encode())  # send data to the client
+    else:
+        if data == "ECB":
+            response, nonce, length = CryptoService.Encrypt(password1, password3)  # encrypt password1 using password3
+
+        if data == 'CBC':
+            response, nonce, length = CryptoService.Encrypt(password2, password3)  # idem
+
+        # send data
+        conn.send(response)
+        t.sleep(0.5)
+        conn.send(nonce)
+        t.sleep(0.5)
+        conn.send(str(length).encode())
+        print(f"The message was sent {response}, {nonce}, {length}")
+    conn.close()
 
 
-Cryptostart()
+KM()
