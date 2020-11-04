@@ -3,8 +3,7 @@ import time
 import CryptoService
 import EncryptedTalk
 
-key3 = b"Nice password303"
-
+password3 = b"MySmallPassword3"
 
 def server_program():
     # get the hostname
@@ -88,11 +87,11 @@ def Service1():
     if type == 1:
         client_program("ECB", 5000)
         info = client_program("ECB", 5500)
-        key = CryptoService.Decrypt(info[0], key3, info[1], int(info[2]))
+        key = CryptoService.Decrypt(info[0], password3, info[1], int(info[2]))
     else:
         client_program('CBC', 5000)
         info = client_program("CBC", 5500)
-        key = CryptoService.Decrypt(info[0], key3, info[1], int(info[2]))
+        key = CryptoService.Decrypt(info[0], password3, info[1], int(info[2]))
     types = server_program()
 
     if types == "ECB":

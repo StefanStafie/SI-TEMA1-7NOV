@@ -1,27 +1,19 @@
-import socket
+import socket as sock
+import time as t
+
 import CryptoService
-import time
-
-key1 = "Nice password101"
-key2 = "Nice password202"
-key3 = b"Nice password303"
 
 
-def server_program():
-    # get the hostname
-    nonce = 0
-    nonce = CryptoService.Encrypt(key1, key3)
+def server(password1="MySmallPassword1", password2="MySmallPassword2", password3=b"MySmallPassword3"):
+    # initiate socket
+    socket = sock.socket()  # get instance
+    hostname = sock.gethostname()
+    port = 5500
+    socket.bind((hostname, port))
 
-    host = socket.gethostname()
-    port = 5500  # initiate port no above 1024
-
-    server_socket = socket.socket()  # get instance
-    # look closely. The bind() function takes tuple as argument
-    server_socket.bind((host, port))  # bind host address and port together
-
-    # configure how many client the server can listen simultaneously
-    server_socket.listen(2)
-    conn, address = server_socket.accept()  # accept new connection
+    #start listening on socket
+    socket.listen(2)
+    conn, address = socket.accept()  # accept new connection
     print("Connection from: " + str(address))
 
     # receive data stream. it won't accept data packet greater than 1024 bytes
@@ -36,30 +28,30 @@ def server_program():
         return 0
     else:
         if data == "ECB":
-            response, nonce, length = CryptoService.Encrypt(key1, key3)
+            response, nonce, length = CryptoService.Encrypt(password1, password3)
             print(response, nonce, length)
             conn.send(response)
             print("send response")  # send data to the client
-            time.sleep(0.5)
+            t.sleep(0.5)
             conn.send(nonce)
             print("sent nonce")  # send data to the client
-            time.sleep(0.5)
+            t.sleep(0.5)
             conn.send(str(length).encode())
-            time.sleep(0.5)
+            t.sleep(0.5)
             response = "1"
             conn.send(response.encode())  # send data to the client
 
         if data == 'CBC':
-            response, nonce, length = CryptoService.Encrypt(key2, key3)
+            response, nonce, length = CryptoService.Encrypt(password2, password3)
             print(response, nonce, length)
             conn.send(response)
             print("send response")  # send data to the client
-            time.sleep(0.5)
+            t.sleep(0.5)
             conn.send(nonce)
             print("sent nonce")  # send data to the client
-            time.sleep(0.5)
+            t.sleep(0.5)
             conn.send(str(length).encode())
-            time.sleep(0.5)
+            t.sleep(0.5)
             response = "1"
             conn.send(response.encode())  # send data to the client
     # conn.close()
@@ -67,7 +59,7 @@ def server_program():
 
 def Cryptostart():
     while True:
-        server_program()
+        server()
 
 
 Cryptostart()
