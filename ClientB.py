@@ -1,6 +1,5 @@
 import socket as sock
 import time as t
-import EncryptedTalk
 import CryptoService
 
 password3 = "MySmallPassword3"
@@ -15,16 +14,40 @@ password3 = b"MySmallPassword3"
 def get_key_from_KM(operating_mode):
     # send to KM
     socket = sock.socket()
-    socket.bind((adress_B, port))
+    socket.bind((adress_B, port + 2))
     socket.connect((host_address, port))
     socket.send(operating_mode)
-
-    t.sleep(1)  # wait for message to be written to socket
-    response = socket.recv(1024)  # receive key
+    # receive key
+    response = socket.recv(2024)
     nonce = socket.recv(1024)
-    length = socket.recv(1024)
+    length = socket.recv(10)
     socket.close()
-    return response, nonce, length
+    return response, nonce, 127
+
+
+def receive_text(key, type):
+    hostname = sock.gethostname()
+    port = 5000
+    socket = sock.socket()
+    socket.bind((hostname, port))
+
+    socket.listen(2)
+    conn, address = socket.accept()
+    print("Receiving message from: " + str(address))
+
+    message = conn.recv(5000)
+    conn.send(b"ack")
+    nonce = conn.recv(1024)
+    conn.send(b"ack")
+    length = conn.recv(1024).decode()
+    conn.send(b"ack")
+
+    if type == b'ECB':
+        decrypted_message = CryptoService.decrypt_ECB(message, key, nonce, int(length))
+    if type == b'CBC':
+        decrypted_message = CryptoService.DecryptCBC(message, key, nonce, int(length), CryptoService.vector)
+
+    return decrypted_message  # return transmission from clientA
 
 
 def run():
@@ -34,26 +57,18 @@ def run():
     socket.listen(2)
     conn, address = socket.accept()  # accept new connection
     print(str(address) + "has established connection")
-
-    if type == 1:
+    t.sleep(1)
+    type = conn.recv(1024)
+    if type == b"ECB":
         response, nonce, length = get_key_from_KM(b"ECB")
-        socket.send("ECB")
     else:
         response, nonce, length = get_key_from_KM(b"CBC")
-        socket.send("CBC")
 
-    key = CryptoService.Decrypt(response, password3, nonce, int(length))
-
-    t.sleep(1)
-    if socket.recv(1024) == "Ready to communicate":
-        file = open("Message.txt", "r")  # read the file
-        for message in file.read():
-            if type == 1:
-                text, nonce, length = CryptoService.Encrypt(message, key.encode())
-            else:
-                text, nonce, length = CryptoService.EncryptCBC(message, key.encode(), CryptoService.vector)
-            socket.send(bytes(message))
-        socket.send(b"Transmission ended.")
+    key = CryptoService.decrypt_ECB(response, password3, nonce, int(length))
+    print(f"I now possess the key: {key}")
+    # key is now available. Send "ready" to clientA
+    conn.send(b"Ready to communicate")
+    print(receive_text(key.encode(), type))
 
 
 run()

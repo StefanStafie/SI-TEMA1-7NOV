@@ -1,7 +1,6 @@
 import socket as sock
 import time as t
 import CryptoService
-import EncryptedTalk
 
 host_address = "127.0.0.1"
 adress_A = "127.0.0.2"
@@ -13,17 +12,27 @@ password3 = b"MySmallPassword3"
 def get_key_from_KM(operating_mode):
     # send to KM
     socket = sock.socket()
-    socket.bind((adress_A, port))
+    socket.bind((adress_A, port + 1))
     socket.connect((host_address, port))
     socket.send(operating_mode)
 
-    t.sleep(1)  # wait for message to be written to socket
-    response = socket.recv(1024)  # receive key
+    # receive key
+    response = socket.recv(1024)
     nonce = socket.recv(1024)
-    length = socket.recv(1024)
+    length = socket.recv(10)
     socket.close()
-    return response, nonce, length
+    return response, nonce, "127"
 
+def send_text(message, nonce, length, port): #function for sending code to clientB
+    hostname = sock.gethostname()
+    socket = sock.socket()
+    socket.connect((hostname, port))
+    socket.send(message)
+    data = socket.recv(1024).decode()
+    socket.send(nonce)
+    data = socket.recv(1024).decode()
+    socket.send(str(length).encode())
+    data = socket.recv(1024).decode()
 
 def run():
     print("Enter encryption type?")
@@ -33,30 +42,37 @@ def run():
             break
         else:
             print("press 1 or 2")
+
+    if type == 1:
+        response, nonce, length = get_key_from_KM(b"ECB")
+    else:
+        response, nonce, length = get_key_from_KM(b"CBC")
+
     # connect to client2
     socket = sock.socket()
     socket.bind((adress_A, port))
     socket.connect((adress_B, port))
 
     if type == 1:
-        response, nonce, length = get_key_from_KM(b"ECB")
-        socket.send("ECB")
+        socket.send(b"ECB")
     else:
-        response, nonce, length = get_key_from_KM(b"CBC")
-        socket.send("CBC")
+        socket.send(b"CBC")
 
-    key = CryptoService.Decrypt(response, password3, nonce, int(length))
+    print(response)
+    print(nonce)
+    print(length)
+    key = CryptoService.decrypt_ECB(response, password3, nonce, int(length))
 
-    t.sleep(1)
-    if socket.recv(1024) == "Ready to communicate":
-        file = open("Message.txt", "r")  # read the file
-        for message in file.read():
-            if type == 1:
-                text, nonce, length = CryptoService.Encrypt(message, key.encode())
-            else:
-                text, nonce, length = CryptoService.EncryptCBC(message, key.encode(), CryptoService.vector)
-            socket.send(bytes(message))
-        socket.send(b"Transmission ended.")
+    print(f"I now possess the key: {key}")
+    if socket.recv(1024) == b"Ready to communicate":
+        file = open("text.txt", "r")  # read the file
+        message = file.read()
+        if type == 1:
+            info, nonce, length = CryptoService.encrypt_ECB(message, key.encode())
+        else:
+            info, nonce, length = CryptoService.encrypt_CBC(message, key.encode(), CryptoService.vector)
+        send_text(info, nonce, length, 5000)
+    print("text sent, job done")
 
 
 run()

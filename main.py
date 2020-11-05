@@ -12,7 +12,6 @@ port = 5500
 def KM(password1="MySmallPassword1", password2="MySmallPassword2", password3=b"MySmallPassword3"):
     # initiate socket
     socket = sock.socket()  # get instance
-    socket.setsockopt(sock.SOL_SOCKET, sock.SO_REUSEADDR, 1)
     socket.bind((host_address, port))
 
     # start listening on socket
@@ -20,7 +19,7 @@ def KM(password1="MySmallPassword1", password2="MySmallPassword2", password3=b"M
     print(f"listening on {host_address}:{port}")
     while True:
         handle_request(socket, password1, password2, password3)
-    # conn.close()
+    conn.close()
 
 
 def handle_request(socket, password1, password2, password3):
@@ -37,19 +36,18 @@ def handle_request(socket, password1, password2, password3):
         conn.send(response.encode())  # send data to the client
     else:
         if data == "ECB":
-            response, nonce, length = CryptoService.Encrypt(password1, password3)  # encrypt password1 using password3
+            response, nonce, length = CryptoService.encrypt_ECB(password1, password3)  # encrypt password1 using password3
 
         if data == 'CBC':
-            response, nonce, length = CryptoService.Encrypt(password2, password3)  # idem
+            response, nonce, length = CryptoService.encrypt_ECB(password2, password3)  # idem
 
         # send data
         conn.send(response)
-        t.sleep(0.5)
+        t.sleep(0.1)
         conn.send(nonce)
-        t.sleep(0.5)
+        t.sleep(0.1)
         conn.send(str(length).encode())
-        print(f"The message was sent {response}, {nonce}, {length}")
+        print(f"The message was sent {response}\n, {nonce}\n, {str(length).encode()}")
     conn.close()
-
 
 KM()
